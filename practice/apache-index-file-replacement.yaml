@@ -1,0 +1,30 @@
+- name: Playbook
+  hosts: webservers
+  become: yes
+  become_user: root
+
+  tasks:
+    - name: Ensure Apache is at the latest version
+      dnf:
+        name: httpd
+        state: latest
+
+    - name: Ensure Apache is running
+      service:
+        name: httpd
+        state: started
+
+    - name: Perform cURL request to the Apache index page
+      shell: curl -s -o /dev/null -w "%{http_code}" http://localhost/
+      register: curl_result
+      changed_when: false
+
+    - name: Replace index file with "Hello, world!" if cURL failed
+      copy:
+        content: "<html><body><h1>Hello, world!</h1></body></html>"
+        dest: /var/www/html/index.html
+      when: curl_result.stdout != "200"
+
+    - name: Display cURL result
+      debug:
+        var: curl_result.stdout
